@@ -1,12 +1,59 @@
 [
 	{
-		"id" : "edit",
-		"children" : [
-						{
-							"id" : "banner",
-							"caption" : "banner",
-							"command" : "banner"
-						}
-					]
+	    "caption": "Preferences",
+	    "mnemonic": "n",
+	    "id": "preferences",
+	    "children":
+	    [
+	        {
+	            "caption": "Package Settings",
+	            "mnemonic": "P",
+	            "id": "package-settings",
+	            "children":
+	            [
+	                {
+	                    "caption": "CommentBanner",
+	                    "children":
+	                    [
+	                        {
+	                            "command": "open_file",
+	                            "args": {"file": "${packages}/CommentBanner/CommentBanner.sublime-settings"},
+	                            "caption": "Settings – Default"
+	                        },
+	                        {
+	                            "command": "open_file",
+	                            "args": {"file": "${packages}/User/CommentBanner.sublime-settings"},
+	                            "caption": "Settings – User"
+	                        },
+	                        {
+	                            "command": "open_file",
+	                            "args": {
+	                                "file": "${packages}/CommentBanner/Default (Windows).sublime-keymap",
+	                                "platform": "Windows"
+	                            },
+	                            "caption": "Key Bindings – Default"
+	                        },
+	                        {
+	                            "command": "open_file",
+	                            "args": {
+	                                "file": "${packages}/CommentBanner/Default (OSX).sublime-keymap",
+	                                "platform": "OSX"
+	                            },
+	                            "caption": "Key Bindings – Default"
+	                        },
+	                        {
+	                            "command": "open_file",
+	                            "args": {
+	                                "file": "${packages}/CommentBanner/Default (Linux).sublime-keymap",
+	                                "platform": "Linux"
+	                            },
+	                            "caption": "Key Bindings – Default"
+	                        },
+	                        { "caption": "-" }
+	                    ]
+	                }
+	            ]
+	        }
+	    ]
 	}
 ]
