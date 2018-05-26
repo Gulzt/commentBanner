@@ -56,11 +56,14 @@ class BannerCommand(sublime_plugin.TextCommand):
     def make_banner(self, string, banner_width, symbol):
         comment_characters = self.get_comment_charaters()
 
-        outer = comment_characters + (Prefs.banner_width - len(comment_characters)) * symbol + '\n'
+        for line in string.splitlines():
+            banner_width = max(banner_width, len(line) + len(comment_characters) + 4)
+
+        outer = comment_characters + (banner_width - len(comment_characters)) * symbol + '\n'
 
         inner = ''
         for line in string.splitlines():
             # center each line
-            inner += comment_characters + "{2} {0:^{1}}{2}\n".format(line, Prefs.banner_width - len(comment_characters) - 3, symbol)
+            inner += comment_characters + "{2} {0:^{1}}{2}\n".format(line, banner_width - len(comment_characters) - 3, symbol)
 
         return outer + inner + outer
