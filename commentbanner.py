@@ -7,6 +7,39 @@ import sublime_plugin
 # import textwrap
 
 
+def build_comment_data(view, pt):
+    """From Default.sublime-package/comment.py."""
+
+    shell_vars = view.meta_info("shellVariables", pt)
+    if not shell_vars:
+        return ([], [])
+
+    # transform the list of dicts into a single dict
+    all_vars = {}
+    for v in shell_vars:
+        if 'name' in v and 'value' in v:
+            all_vars[v['name']] = v['value']
+
+    line_comments = []
+    block_comments = []
+
+    # transform the dict into a single array of valid comments
+    suffixes = [""] + ["_" + str(i) for i in range(1, 10)]
+    for suffix in suffixes:
+        start = all_vars.setdefault("TM_COMMENT_START" + suffix)
+        end = all_vars.setdefault("TM_COMMENT_END" + suffix)
+        disable_indent = all_vars.setdefault("TM_COMMENT_DISABLE_INDENT" + suffix)
+
+        if start and end:
+            block_comments.append((start, end, disable_indent == 'yes'))
+            block_comments.append((start.strip(), end.strip(), disable_indent == 'yes'))
+        elif start:
+            line_comments.append((start, disable_indent == 'yes'))
+            line_comments.append((start.strip(), disable_indent == 'yes'))
+
+    return (line_comments, block_comments)
+
+
 class Prefs:
 
     @staticmethod
@@ -34,6 +67,8 @@ class BannerCommand(sublime_plugin.TextCommand):
         Prefs.load()
 
     def run(self, edit):
+        self.comment_character_width = len(build_comment_data(self.view, self.view.sel()[0].begin())[0][0][0]) - 1
+
         for region in self.view.sel():
             bannerText = self.view.substr(region)
             if bannerText:
@@ -42,7 +77,7 @@ class BannerCommand(sublime_plugin.TextCommand):
                 self.view.insert(edit, region.begin(),
                                  self.full_screen_banner(bannerText, Prefs.character))
                 region_len = (region.begin() +
-                              (Prefs.banner_width - 1) * (2 + len(self.lines)))
+                              (Prefs.banner_width - self.comment_character_width) * (2 + len(self.lines)))
                 self.view \
                     .selection \
                     .add(sublime.Region(region.begin(), region_len))
@@ -54,7 +89,7 @@ class BannerCommand(sublime_plugin.TextCommand):
 
     def full_screen_banner(self, string, symbol='*'):
         def outer_row():
-            return ((Prefs.banner_width - 1) - 1) * symbol + '\n'
+            return ((Prefs.banner_width - self.comment_character_width) - 1) * symbol + '\n'
 
         def inner_row():
             result = ""
@@ -63,7 +98,7 @@ class BannerCommand(sublime_plugin.TextCommand):
 
             # center each line
             for line in self.lines:
-                result += "{2} {0:^{1}}{2}\n".format(line, (Prefs.banner_width - 1) - 4,
+                result += "{2} {0:^{1}}{2}\n".format(line, (Prefs.banner_width - self.comment_character_width) - 4,
                                                      symbol)
             return result
         return outer_row() + inner_row() + outer_row()
