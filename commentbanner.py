@@ -1,50 +1,69 @@
-
-"""This module provides the bannerComment plugin
-class and supporting methods."""
-
 import sublime
 import sublime_plugin
-# import textwrap
+
+
+class Prefs:
+
+    @staticmethod
+    def read():
+        settings = sublime.load_settings('CommentBanner.sublime-settings')
+        Prefs.character = settings.get('character', '*')
+        Prefs.banner_width = settings.get('banner_width', 80)
+
+    @staticmethod
+    def load():
+        settings = sublime.load_settings('CommentBanner.sublime-settings')
+        settings.add_on_change('character', Prefs.read)
+        settings.add_on_change('banner_width', Prefs.read)
+        Prefs.read()
 
 
 class BannerCommand(sublime_plugin.TextCommand):
-    """create a fancy comment box around the text selection.
-    - supports multi line selection
-    - supports multi cursor selection
+    """Create a comment box around the selection.
+
+    * supports multi-line selection
+    * supports multi-cursor selection
     """
-    ROW_LENGTH = 77  # 80 - commenttags (like //) and space
+
+    def __init__(self, *args, **kw):
+        super(BannerCommand, self).__init__(*args, **kw)
+        Prefs.load()
 
     def run(self, edit):
-        for region in self.view.sel():
-            bannerText = self.view.substr(region)
-            if bannerText:
-                print(region.begin())
-                self.view.erase(edit, region)
-                self.view.insert(edit, region.begin(),
-                                 self.full_screen_banner(bannerText))
-                region_len = (region.begin() +
-                              self.ROW_LENGTH*(2+len(self.lines)))
-                self.view \
-                    .selection \
-                    .add(sublime.Region(region.begin(), region_len))
-        # add the language dependend comment characters
-        self.view.run_command("toggle_comment", False)
+        view = self.view
 
-        # remove the selection of the cursor
-        self.view.run_command("move", {"by": "characters", "forward": True})
+        for region in view.sel():
+            lines = view.full_line(region)
+            if not lines.empty():
+                content = view.substr(lines)
+                banner = self.make_banner(content, Prefs.banner_width, Prefs.character)
+                view.replace(edit, lines, banner)
+                view.sel().add(sublime.Region(lines.begin(), lines.begin() + len(banner)))
 
-    def full_screen_banner(self, string, symbol='*'):
-        def outer_row():
-            return (self.ROW_LENGTH - 1) * symbol + '\n'
+        view.run_command('move', {'by': 'characters', 'forward': True})
 
-        def inner_row():
-            result = ""
-            self.lines = string.splitlines()
-            # textwrap.wrap(string)
+    def get_comment_charaters(self):
+        shell_vars = self.view.meta_info('shellVariables', 0)
 
+        # transform the list of dicts into a single dict
+        all_vars = {}
+        for v in shell_vars:
+            if 'name' in v and 'value' in v:
+                all_vars[v['name']] = v['value']
+
+        return all_vars.setdefault('TM_COMMENT_START', '')
+
+    def make_banner(self, string, banner_width, symbol):
+        comment_characters = self.get_comment_charaters()
+
+        for line in string.splitlines():
+            banner_width = max(banner_width, len(line) + len(comment_characters) + 4)
+
+        outer = comment_characters + (banner_width - len(comment_characters)) * symbol + '\n'
+
+        inner = ''
+        for line in string.splitlines():
             # center each line
-            for line in self.lines:
-                result += "{2} {0:^{1}}{2}\n".format(line, self.ROW_LENGTH-4,
-                                                     symbol)
-            return result
-        return outer_row() + inner_row() + outer_row()
+            inner += comment_characters + "{2} {0:^{1}}{2}\n".format(line, banner_width - len(comment_characters) - 3, symbol)
+
+        return outer + inner + outer
